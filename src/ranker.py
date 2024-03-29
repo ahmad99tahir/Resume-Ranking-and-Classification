@@ -4,6 +4,7 @@ from src.preprocessing import clean_resume
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+
 def preprocess_data(file_path):
     """
     Preprocesses the data by removing duplicates, resetting the index, and cleaning resumes.
@@ -19,6 +20,33 @@ def preprocess_data(file_path):
     df.reset_index(drop=True, inplace=True)
     df['cleaned_resume'] = df['Resume'].apply(lambda x: clean_resume(x))
     return df
+
+def compute_similarity_with_weights(documents, keywords, keyword_weights):
+    """
+    Computes cosine similarity between documents and a set of weighted keywords.
+
+    Args:
+    documents (list): List of document strings.
+    keywords (list): List of keyword strings.
+    keyword_weights (list): List of weights corresponding to each keyword.
+
+    Returns:
+    numpy.ndarray: Array containing cosine similarity scores.
+    """
+    all_documents = keywords + documents.tolist()
+    tfidf_vectorizer = TfidfVectorizer(stop_words='english')
+    tfidf_matrix = tfidf_vectorizer.fit_transform(all_documents)
+
+    # Apply weights to TF-IDF matrix
+    weighted_tfidf_matrix = tfidf_matrix.copy()
+    for i, keyword in enumerate(keywords):
+        keyword_index = tfidf_vectorizer.vocabulary_.get(keyword)
+        if keyword_index is not None:
+            weighted_tfidf_matrix[:, keyword_index] *= keyword_weights[i]
+
+    cosine_similarities = cosine_similarity(weighted_tfidf_matrix[:len(keywords)], tfidf_matrix[len(keywords):])
+    return cosine_similarities
+
 
 def compute_similarity(documents, keywords):
     """
